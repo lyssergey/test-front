@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: oklch(17% 0.012 260);
+  --color-surface: oklch(21% 0.014 260);
+  --color-surface-2: oklch(25% 0.016 260);
+  --color-surface-3: oklch(30% 0.018 260);
+  --color-line: oklch(33% 0.018 260);
+  --color-line-strong: oklch(42% 0.02 260);
+  --color-ink: oklch(94% 0.005 260);
+  --color-ink-muted: oklch(72% 0.012 260);
+  --color-ink-faint: oklch(58% 0.014 260);
+  --color-accent: oklch(78% 0.13 195);
+  --color-accent-dim: oklch(48% 0.09 195);
+  --color-low: oklch(70% 0.1 160);
+  --color-medium: oklch(80% 0.13 80);
+  --color-high: oklch(68% 0.18 20);
+  --color-info: oklch(72% 0.11 250);
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-dim);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
