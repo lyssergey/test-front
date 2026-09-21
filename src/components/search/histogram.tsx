@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { useState } from "react";
 
 import type { Histogram as HistogramData } from "@/lib/api/types";
+import { barHeight } from "@/lib/chart-scale";
 import { formatNumber, formatTimestamp } from "@/lib/format";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -57,7 +58,7 @@ export function Histogram({
         {loading ? <Spinner className="size-3" /> : null}
         {data ? (
           <span>
-            · {String(data.bucket_s)}s buckets · peak {formatNumber(peak)}
+            · {String(data.bucket_s)}s buckets · peak {formatNumber(peak)} · √ scale
           </span>
         ) : null}
         {canZoom ? <span>· click a bar to zoom</span> : null}
@@ -78,7 +79,7 @@ export function Histogram({
           const x = ((bucketStart - start) / span) * 1000;
           const width = Math.max(1.2, (bucketMs / span) * 1000);
           const total = sum(bucket.by_protocol);
-          const height = (total / peak) * (HEIGHT - 4);
+          const height = barHeight(total, peak, HEIGHT - 4);
 
           return (
             <motion.rect
