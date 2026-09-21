@@ -26,9 +26,9 @@ export function TimeWindow({
   disabled?: boolean;
 }) {
   const applyPreset = (hours: number) => {
-    const end = captureNow ?? new Date().toISOString();
-    const endMs = new Date(end).getTime();
-    onChange({ from: new Date(endMs - hours * 3_600_000).toISOString(), to: end });
+    if (captureNow === undefined) return;
+    const endMs = new Date(captureNow).getTime();
+    onChange({ from: new Date(endMs - hours * 3_600_000).toISOString(), to: captureNow });
   };
 
   const activePreset = PRESETS.find((preset) => {

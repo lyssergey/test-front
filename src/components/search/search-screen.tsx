@@ -47,14 +47,14 @@ import { TimeWindow } from "./time-window";
 /** The order a running search serves its pages in. */
 const SCAN_SORT: SortKey = "-ts";
 
-/** Give back a search slot; there are only three per user. */
+const PENDING_WINDOW = { from: "", to: "" } as const;
+
 function freeSearch(searchId: string): void {
   void fetch(`/api/capture/v1/searches/${searchId}`, { method: "DELETE", keepalive: true });
 }
 
 function bucketSecondsFor(from: string, to: string): number {
   const spanSeconds = (new Date(to).getTime() - new Date(from).getTime()) / 1000;
-  // Aim for roughly 120 buckets, inside the 60s-86400s the endpoint accepts.
   return Math.min(86_400, Math.max(60, Math.round(spanSeconds / 120 / 60) * 60 || 60));
 }
 
@@ -74,52 +74,49 @@ export function SearchScreen() {
     [sensorsQuery.data, user.sensor_ids],
   );
 
-  // The capture sits days behind the wall clock, so a window guessed from
-  // `Date.now()` is outside every sensor's retention and the API rejects it.
-  // Nothing is queried until /v1/health has said what "now" means here.
-  const defaults = useMemo(() => {
-    const end = captureNow ?? new Date().toISOString();
-    const from = new Date(new Date(end).getTime() - 6 * 3_600_000).toISOString();
-    return { sensors: user.sensor_ids.slice(0, 5), from, to: end };
-  }, [captureNow, user.sensor_ids]);
+  // Every window is relative to the capture clock, which only /v1/health knows.
+  // Until it answers there is no window — and none is invented from `Date.now()`,
+  // which would differ between the server render and the first client render and
+  // would be outside every sensor's retention anyway.
+  const captureWindow = useMemo(() => {
+    if (captureNow === undefined) return null;
+    const end = new Date(captureNow).getTime();
+    return { from: new Date(end - 6 * 3_600_000).toISOString(), to: captureNow };
+  }, [captureNow]);
 
-  const url = useMemo(
-    () => readSearchUrl(new URLSearchParams(params.toString()), defaults),
-    [params, defaults],
-  );
+  const url = useMemo(() => readSearchUrl(new URLSearchParams(params.toString())), [params]);
   const searchId = params.get("sid");
 
   // Both stay null until touched, so the defaults can follow the capture clock
   // as it arrives from /v1/health instead of being frozen by an effect.
-  const [pickedSensors, setSensors] = useState<string[] | null>(
-    params.get("sensors") === null ? null : url.sensors,
-  );
-  const [pickedWindow, setWindow] = useState<{ from: string; to: string } | null>(
-    params.get("from") === null ? null : { from: url.from, to: url.to },
-  );
+  const [pickedSensors, setSensors] = useState<string[] | null>(url.sensors);
+  const [pickedWindow, setWindow] = useState<{ from: string; to: string } | null>(url.window);
   const [draft, setDraft] = useState<GroupDraft>(() => draftFromFilter(url.filter));
   const [sort, setSort] = useState<SortKey>(url.sort);
   const previousSearchRef = useRef<string | null>(null);
 
-  const sensors = pickedSensors ?? defaults.sensors;
-  const window = pickedWindow ?? { from: defaults.from, to: defaults.to };
+  const sensors = pickedSensors ?? user.sensor_ids.slice(0, 5);
+  const window = pickedWindow ?? captureWindow;
+  // Stands in for the hooks below while there is no window; they are all disabled,
+  // and a fixed value keeps their keys and the rendered output deterministic.
+  const win = window ?? PENDING_WINDOW;
 
   const fields = useMemo(() => fieldsQuery.data ?? [], [fieldsQuery.data]);
   const fieldMap = useMemo(() => new Map(fields.map((field) => [field.name, field])), [fields]);
   const built = useMemo(() => buildFilter(draft, fieldMap), [draft, fieldMap]);
   const filterRows = useMemo(() => toFilterRows(built.filter), [built.filter]);
 
-  const windowIsReal = captureNow !== undefined || params.get("from") !== null;
+  const windowIsReal = window !== null;
 
   // The flag travels with the value: debounced on its own it would turn true
-  // while the window it guards is still the one guessed from the wall clock.
+  // while the window it guards is still the placeholder.
   const debounced = useDebounced(
     useMemo(
       () => ({
-        query: { from: window.from, to: window.to, sensors, rows: filterRows },
+        query: { from: win.from, to: win.to, sensors, rows: filterRows },
         real: windowIsReal,
       }),
-      [window.from, window.to, sensors, filterRows, windowIsReal],
+      [win.from, win.to, sensors, filterRows, windowIsReal],
     ),
     450,
   );
@@ -141,13 +138,13 @@ export function SearchScreen() {
   const setSearchId = useCallback(
     (nextId: string | null, nextSort: SortKey = sort) => {
       const query = writeSearchUrl(
-        { sensors, from: window.from, to: window.to, filter: built.filter, sort: nextSort },
+        { sensors, from: win.from, to: win.to, filter: built.filter, sort: nextSort },
         nextId !== null,
       );
       const suffix = nextId === null ? "" : `&sid=${nextId}`;
       router.replace(`/search?${query}${suffix}`, { scroll: false });
     },
-    [built.filter, router, sensors, sort, window.from, window.to],
+    [built.filter, router, sensors, sort, win.from, win.to],
   );
 
   useEffect(() => {
@@ -177,14 +174,14 @@ export function SearchScreen() {
       // be read while the search is still running.
       {
         sensor_ids: sensors,
-        from: window.from,
-        to: window.to,
+        from: win.from,
+        to: win.to,
         filter: built.filter,
         sort: SCAN_SORT,
       },
       { onSuccess: (search) => setSearchId(search.id) },
     );
-  }, [built.filter, createSearch, sensors, setSearchId, window.from, window.to, windowIsReal]);
+  }, [built.filter, createSearch, sensors, setSearchId, win.from, win.to, windowIsReal]);
 
   // A shared `run=1` link starts its search once the metadata it needs is in.
   const autoRunRef = useRef(false);
@@ -199,14 +196,20 @@ export function SearchScreen() {
   const searchRunning = search !== undefined && !isTerminal(search.state);
   const conditionCount = countConditions(draft);
 
-  if (!windowIsReal && !health.isError) {
+  if (window === null) {
     return (
       <div className="space-y-2 p-2">
-        <Skeleton className="h-28 w-full" />
-        <Skeleton className="h-16 w-full" />
-        <p className="text-2xs text-ink-faint px-1">
-          Reading the capture clock — every time window is relative to it, not to this computer.
-        </p>
+        {health.isError ? (
+          <ErrorState error={health.error} onRetry={() => void health.refetch()} />
+        ) : (
+          <>
+            <Skeleton className="h-28 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <p className="text-2xs text-ink-faint px-1">
+              Reading the capture clock — every time window is relative to it, not to this computer.
+            </p>
+          </>
+        )}
       </div>
     );
   }
@@ -248,7 +251,7 @@ export function SearchScreen() {
                 variant="ghost"
                 onClick={() => {
                   const query = writeSearchUrl(
-                    { sensors, from: window.from, to: window.to, filter: built.filter, sort },
+                    { sensors, from: win.from, to: win.to, filter: built.filter, sort },
                     true,
                   );
                   void navigator.clipboard.writeText(`${location.origin}/search?${query}`);
