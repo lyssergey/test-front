@@ -354,8 +354,18 @@ export function SearchScreen() {
             title="No search yet"
             hint={
               conditionCount === 0
-                ? "Pick sensors and a window, then run the search. With no conditions it matches everything in the window."
-                : `${String(conditionCount)} ${conditionCount === 1 ? "condition" : "conditions"} ready. Run the search to start scanning.`
+                ? "The timeline above is an estimate of the window. The table needs a search: with no conditions it matches everything in it."
+                : `${String(conditionCount)} ${conditionCount === 1 ? "condition" : "conditions"} ready. The table fills once the search runs.`
+            }
+            action={
+              <Button
+                variant="primary"
+                onClick={run}
+                disabled={sensors.length === 0 || createSearch.isPending}
+              >
+                {createSearch.isPending ? <Spinner /> : <Play className="size-3" />}
+                Run search
+              </Button>
             }
           />
         ) : results.error && results.rows.length === 0 ? (

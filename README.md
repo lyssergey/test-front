@@ -164,7 +164,7 @@ none). Groups nest and can be negated.
 Above the results: a live estimate from `/v1/estimate` before anything runs, and a timeline from
 `/v1/histogram`. Buckets are placed by timestamp rather than by index, because buckets with no
 capture are **omitted** upstream — a capture gap has to read as a hole, not as a quiet spell.
-Bar heights use a square-root scale: on a linear scale one busy bucket flattens every other one to an unreadable line, so the header states `√ scale` rather than let the heights read as proportional. Partial and under-covered buckets are coloured differently, and clicking a bar zooms the window to that bucket — offered only while a bucket is narrower than the window, since at one bucket per window the click would change nothing you could see. The window inputs carry seconds, because at this zoom level a minute is a long time.
+Bar heights on both charts here and the session's flow use a square-root scale: on a linear scale one busy bucket flattens every other one to an unreadable line, so the header states `√ scale` rather than let the heights read as proportional. Partial and under-covered buckets are coloured differently, and clicking a bar zooms the window to that bucket — offered only while a bucket is narrower than the window, since at one bucket per window the click would change nothing you could see. The window inputs carry seconds, because at this zoom level a minute is a long time.
 When the filter uses `any`, `not` or nesting, the timeline says why it cannot be drawn instead of
 showing something misleading: that endpoint only takes AND-ed conditions.
 
@@ -172,6 +172,10 @@ The results table takes its columns from `/v1/meta/columns`, in the server's ord
 server's visibility defaults and width hints. Rows are virtualised, so thousands scroll without
 the DOM growing. Undocumented column types render as text, as the spec instructs — the live API
 already serves one (`geo_hint`), so this is not hypothetical.
+
+The timeline is drawn from an estimate, without a search; the table needs one. That is easy to
+miss, so the empty table says it and carries its own **Run search** button rather than pointing
+at the header.
 
 Every state has a screen: nothing run yet, scanning with no rows yet, caught up and waiting,
 paused at the row budget, finished empty, expired, and failed — the last one showing the stable

@@ -9,11 +9,13 @@ export function EmptyState({
   title,
   hint,
   icon,
+  action,
   className,
 }: {
   title: string;
   hint?: ReactNode;
   icon?: ReactNode;
+  action?: ReactNode;
   className?: string;
 }) {
   return (
@@ -26,6 +28,7 @@ export function EmptyState({
       {icon ? <div className="text-ink-faint">{icon}</div> : null}
       <p className="text-ink-muted text-sm">{title}</p>
       {hint ? <p className="text-ink-faint max-w-md text-xs">{hint}</p> : null}
+      {action ? <div className="mt-1">{action}</div> : null}
     </div>
   );
 }

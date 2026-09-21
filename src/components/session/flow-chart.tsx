@@ -1,6 +1,7 @@
 "use client";
 
 import type { SessionFlow } from "@/lib/api/types";
+import { barHeight } from "@/lib/chart-scale";
 import { formatBytes, formatNumber } from "@/lib/format";
 
 const HEIGHT = 120;
@@ -35,7 +36,7 @@ export function FlowChart({ flow }: { flow: SessionFlow }) {
         <span className="text-low">↑ {formatBytes(totals.up)}</span>
         <span className="text-info">↓ {formatBytes(totals.down)}</span>
         <span>{formatNumber(totals.packets)} packets</span>
-        <span className="ml-auto">peak {formatBytes(peak)} per bucket</span>
+        <span className="ml-auto">peak {formatBytes(peak)} per bucket · √ scale</span>
       </div>
 
       <svg
@@ -49,8 +50,8 @@ export function FlowChart({ flow }: { flow: SessionFlow }) {
         {samples.map((sample) => {
           const x = ((sample.t - start) / span) * 1000;
           const width = Math.max(1, (flow.bucket_ms / span) * 1000);
-          const up = (sample.bytes_up / peak) * (MID - 2);
-          const down = (sample.bytes_down / peak) * (MID - 2);
+          const up = barHeight(sample.bytes_up, peak, MID - 2);
+          const down = barHeight(sample.bytes_down, peak, MID - 2);
           return (
             <g key={sample.t}>
               <rect

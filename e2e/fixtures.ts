@@ -9,12 +9,12 @@ export async function signIn(page: Page, who = ANALYST): Promise<void> {
   await page.getByLabel("Password").fill(who.password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/search/);
-  await expect(page.getByRole("button", { name: "Run search" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Run search" }).first()).toBeEnabled();
 }
 
 /** Runs the search the query bar currently holds and waits for the first rows. */
 export async function runSearch(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Run search" }).click();
+  await page.getByRole("button", { name: "Run search" }).first().click();
   await expect(page.getByTestId("job-progress")).toBeVisible();
   await expect(page.getByTestId("result-row").first()).toBeVisible({ timeout: 30_000 });
 }

@@ -8,12 +8,26 @@ test.describe("the search screen", () => {
     await expect(page.getByTestId("result-row")).toHaveCount(0);
   });
 
+  test("offers the run button where the empty table is, not only in the header", async ({
+    signedIn: page,
+  }) => {
+    // The timeline fills from an estimate without a search, so the empty table
+    // has to say that and give the user the button there.
+    const empty = page.getByText("No search yet").locator("..");
+    await expect(empty).toContainText("The table needs a search");
+
+    await empty.getByRole("button", { name: "Run search" }).click();
+    await expect(page.getByTestId("job-progress")).toBeVisible();
+    await expect(page.getByTestId("result-row").first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("No search yet")).toHaveCount(0);
+  });
+
   test("streams rows page by page while the search is still running", async ({
     signedIn: page,
   }) => {
     // 72 hours is the whole capture: enough work that rows arrive long before it ends.
     await page.getByRole("button", { name: "72h", exact: true }).click();
-    await page.getByRole("button", { name: "Run search" }).click();
+    await page.getByRole("button", { name: "Run search" }).first().click();
 
     const progress = page.getByTestId("job-progress");
     await expect(page.getByTestId("result-row").first()).toBeVisible({ timeout: 30_000 });
@@ -49,7 +63,7 @@ test.describe("the search screen", () => {
     await page.getByRole("option", { name: "Destination port" }).click();
     await page.getByLabel("Value").fill("9");
 
-    await page.getByRole("button", { name: "Run search" }).click();
+    await page.getByRole("button", { name: "Run search" }).first().click();
     await expect(page.getByText("Nothing matched")).toBeVisible({ timeout: 40_000 });
   });
 
@@ -98,7 +112,7 @@ test.describe("the search screen", () => {
   });
 
   test("lets the user cancel a running search", async ({ signedIn: page }) => {
-    await page.getByRole("button", { name: "Run search" }).click();
+    await page.getByRole("button", { name: "Run search" }).first().click();
     const cancel = page.getByRole("button", { name: "Cancel" });
     if (await cancel.isVisible().catch(() => false)) {
       await cancel.click();
