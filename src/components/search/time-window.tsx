@@ -68,7 +68,7 @@ export function TimeWindow({
             const iso = parseInputToIso(event.target.value);
             if (iso) onChange({ from: iso, to });
           }}
-          className="tabular w-[10.5rem]"
+          className="tabular w-42"
         />
         <span className="text-ink-faint text-xs">→</span>
         <Input
@@ -80,7 +80,7 @@ export function TimeWindow({
             const iso = parseInputToIso(event.target.value);
             if (iso) onChange({ from, to: iso });
           }}
-          className="tabular w-[10.5rem]"
+          className="tabular w-42"
         />
         <span className="text-2xs text-ink-faint">UTC</span>
       </div>
