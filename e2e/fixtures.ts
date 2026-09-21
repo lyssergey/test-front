@@ -12,9 +12,37 @@ export async function signIn(page: Page, who = ANALYST): Promise<void> {
   await expect(page.getByRole("button", { name: "Run search" }).first()).toBeEnabled();
 }
 
+const rateLimited = (page: Page) =>
+  page.getByTestId("error-state").filter({ hasText: "search_rate_limited" });
+
+async function isRateLimited(page: Page): Promise<boolean> {
+  return rateLimited(page)
+    .waitFor({ state: "visible", timeout: 1_500 })
+    .then(() => true)
+    .catch(() => false);
+}
+
+/** Starts a search, waiting out the twelve-a-minute limit the API enforces. */
+export async function clickRun(page: Page): Promise<void> {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    await page.getByRole("button", { name: "Run search" }).first().click();
+    if (!(await isRateLimited(page))) return;
+    await page.waitForTimeout(8_000);
+  }
+  throw new Error("still rate limited after eight attempts");
+}
+
+/** For a `run=1` link, which starts itself: reload until the limit lets it through. */
+export async function reloadPastRateLimit(page: Page): Promise<void> {
+  for (let attempt = 0; attempt < 8 && (await isRateLimited(page)); attempt += 1) {
+    await page.waitForTimeout(8_000);
+    await page.reload();
+  }
+}
+
 /** Runs the search the query bar currently holds and waits for the first rows. */
 export async function runSearch(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Run search" }).first().click();
+  await clickRun(page);
   await expect(page.getByTestId("job-progress")).toBeVisible();
   await expect(page.getByTestId("result-row").first()).toBeVisible({ timeout: 30_000 });
 }

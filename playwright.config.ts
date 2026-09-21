@@ -4,7 +4,9 @@ const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 60_000,
+  // Generous on purpose: the API allows twelve searches a minute and this suite
+  // starts eight, so a second run inside the same minute has to wait one out.
+  timeout: 120_000,
   expect: { timeout: 15_000 },
   // A user may hold only three searches at once upstream, so specs that run
   // searches must not race each other for the slots.

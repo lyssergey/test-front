@@ -87,6 +87,7 @@ export function SearchScreen() {
   const [pickedWindow, setWindow] = useState<{ from: string; to: string } | null>(url.window);
   const [draft, setDraft] = useState<GroupDraft>(() => draftFromFilter(url.filter));
   const [sort, setSort] = useState<SortKey>(url.sort);
+  const [cancelledId, setCancelledId] = useState<string | null>(null);
   const previousSearchRef = useRef<string | null>(null);
 
   const sensors = pickedSensors ?? user.sensor_ids.slice(0, 5);
@@ -174,10 +175,13 @@ export function SearchScreen() {
   }, [fields.length, readableSensors.length, run, searchId, url.autoRun, windowIsReal]);
 
   const search = status.data;
+  const cancelled = searchId !== null && cancelledId === searchId;
   // 404: the id in the URL points at a search the server no longer has (it was
   // cancelled, it idled out, or the API restarted). 410 is the same, stated.
   const searchGone =
-    status.error !== null && (status.error.status === 404 || status.error.status === 410);
+    !cancelled &&
+    status.error !== null &&
+    (status.error.status === 404 || status.error.status === 410);
   const searchRunning = search !== undefined && !isTerminal(search.state);
   const conditionCount = countConditions(draft);
 
@@ -326,8 +330,11 @@ export function SearchScreen() {
             matchedSoFar={results.matchedSoFar}
             phase={results.phase}
             canceling={cancelSearch.isPending}
+            cancelled={cancelled}
             onCancel={() => {
-              if (searchId) cancelSearch.mutate(searchId);
+              if (searchId) {
+                cancelSearch.mutate(searchId, { onSuccess: () => setCancelledId(searchId) });
+              }
             }}
           />
         ) : null}
@@ -416,7 +423,9 @@ export function SearchScreen() {
                     Load more
                   </Button>
                 ) : null}
-                {results.error ? <span className="text-medium">{results.error.detail}</span> : null}
+                {results.error && !cancelled ? (
+                  <span className="text-medium">{results.error.detail}</span>
+                ) : null}
               </div>
             }
           />

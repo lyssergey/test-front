@@ -274,6 +274,10 @@ must not race each other for the slots, and each test hands back what it started
 interrupted hard, an orphaned search can hold a slot for up to ten idle minutes; restarting the
 API clears it.
 
+It is also patient rather than flaky: the API allows twelve searches a minute and one run starts
+eight, so a second run inside the same minute waits the limit out instead of failing. A cold run
+takes about 35 seconds, a rate-limited one about 50.
+
 Two bugs these tests caught after the fact, both real: a `DurationCell` that was written but never
 wired up (the cell test), and rows being appended twice on a development double-mount (the paging
 test).
@@ -431,6 +435,11 @@ had to correct:
   Suppressing it would have hidden the symptom at the cost of masking real attribute mismatches on
   exactly the two fields most worth checking, so it was not added.
 
+- **Cancel did not visibly cancel.** Deleting a search upstream makes it _gone_, not
+  `cancelled` — the next status poll answers 404 — and TanStack Query keeps the last good data
+  alongside an error, so the strip went on claiming `running` with a 404 card beside it. Now
+  cancelling ends the job locally, keeps the rows already read (which is why you cancelled) and
+  shows no error for an outcome the user asked for. An end-to-end test asserts each of those.
 - **A missing app icon**, which was the `/favicon.ico` 404 in the console.
 
 The incident conclusion is mine from the data, not from the simulator's source, which I did not

@@ -27,6 +27,7 @@ export function JobProgress({
   phase,
   onCancel,
   canceling,
+  cancelled,
 }: {
   search: Search;
   loadedRows: number;
@@ -35,8 +36,11 @@ export function JobProgress({
   phase: ResultsPhase;
   onCancel: () => void;
   canceling: boolean;
+  /** Cancelling deletes the search upstream, so its state can only be read locally. */
+  cancelled: boolean;
 }) {
-  const running = search.state === "queued" || search.state === "running";
+  const state = cancelled ? "cancelled" : search.state;
+  const running = !cancelled && (search.state === "queued" || search.state === "running");
   const { progress } = search;
   const matched = Math.max(progress.matched, matchedSoFar, loadedRows);
   const matchedIsEstimate = progress.matched_is_estimate && progress.matched > matched - 1;
@@ -44,9 +48,9 @@ export function JobProgress({
   return (
     <div data-testid="job-progress" className="space-y-1.5 px-3 py-2">
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <Badge tone={running ? "accent" : search.state === "done" ? "low" : "medium"}>
+        <Badge tone={running ? "accent" : state === "done" ? "low" : "medium"}>
           {running ? <Spinner className="size-2.5" /> : null}
-          {search.state}
+          {state}
         </Badge>
 
         <span className="tabular text-ink">

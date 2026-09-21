@@ -1,4 +1,4 @@
-import { expect, runSearch, test } from "./fixtures";
+import { clickRun, expect, reloadPastRateLimit, runSearch, test } from "./fixtures";
 
 test.describe("the search screen", () => {
   test("shows what it will do before anything runs", async ({ signedIn: page }) => {
@@ -17,6 +17,7 @@ test.describe("the search screen", () => {
     await expect(empty).toContainText("The table needs a search");
 
     await empty.getByRole("button", { name: "Run search" }).click();
+    await reloadPastRateLimit(page);
     await expect(page.getByTestId("job-progress")).toBeVisible();
     await expect(page.getByTestId("result-row").first()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("No search yet")).toHaveCount(0);
@@ -27,7 +28,7 @@ test.describe("the search screen", () => {
   }) => {
     // 72 hours is the whole capture: enough work that rows arrive long before it ends.
     await page.getByRole("button", { name: "72h", exact: true }).click();
-    await page.getByRole("button", { name: "Run search" }).first().click();
+    await clickRun(page);
 
     const progress = page.getByTestId("job-progress");
     await expect(page.getByTestId("result-row").first()).toBeVisible({ timeout: 30_000 });
@@ -63,7 +64,7 @@ test.describe("the search screen", () => {
     await page.getByRole("option", { name: "Destination port" }).click();
     await page.getByLabel("Value").fill("9");
 
-    await page.getByRole("button", { name: "Run search" }).first().click();
+    await clickRun(page);
     await expect(page.getByText("Nothing matched")).toBeVisible({ timeout: 40_000 });
   });
 
@@ -91,6 +92,7 @@ test.describe("the search screen", () => {
     });
 
     await page.goto(`/search?${query.toString()}`);
+    await reloadPastRateLimit(page);
 
     // The form is rebuilt from the link…
     await expect(page.getByLabel("Field")).toContainText("Protocol");
@@ -111,12 +113,24 @@ test.describe("the search screen", () => {
     await expect(page).toHaveURL(/\/search/);
   });
 
-  test("lets the user cancel a running search", async ({ signedIn: page }) => {
-    await page.getByRole("button", { name: "Run search" }).first().click();
-    const cancel = page.getByRole("button", { name: "Cancel" });
-    if (await cancel.isVisible().catch(() => false)) {
-      await cancel.click();
-      await expect(page.getByTestId("job-progress")).toContainText(/cancelled|done/);
-    }
+  test("cancelling ends the job and keeps the rows already read", async ({ signedIn: page }) => {
+    // The whole capture, so the job is still running when Cancel is pressed.
+    await page.getByRole("button", { name: "72h", exact: true }).click();
+    await clickRun(page);
+    await expect(page.getByTestId("result-row").first()).toBeVisible({ timeout: 30_000 });
+
+    const progress = page.getByTestId("job-progress");
+    await expect(progress).toContainText("running");
+    await page.getByRole("button", { name: "Cancel" }).click();
+
+    // Cancelling deletes the search upstream, so the state is only knowable
+    // locally — the strip must not keep claiming the job is running.
+    await expect(progress).toContainText("cancelled");
+    await expect(progress).not.toContainText("running");
+    await expect(page.getByRole("button", { name: "Cancel" })).toHaveCount(0);
+
+    // What was already read stays on screen, and no 404 is shown for it.
+    await expect(page.getByTestId("result-row").first()).toBeVisible();
+    await expect(page.getByTestId("error-state")).toHaveCount(0);
   });
 });
