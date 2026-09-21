@@ -19,10 +19,7 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
-/**
- * The v1 decoder emits a single object where v2 emits a one-element array
- * (`dns.authority`), so an array step accepts both.
- */
+/** v1 emits a lone object where v2 emits a one-element array (`dns.authority`). */
 export function toArray(value: unknown): unknown[] {
   if (value === undefined) return [];
   return Array.isArray(value) ? value : [value];

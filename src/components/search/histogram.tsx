@@ -9,13 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 const HEIGHT = 64;
 
-/**
- * Matching sessions over time.
- *
- * Buckets the sensors did not capture are absent from the response rather than
- * zero, so bars are positioned by timestamp: a capture gap reads as a hole, not
- * as a quiet stretch.
- */
+/** Bars are placed by timestamp: uncaptured buckets are absent upstream, so a gap stays a hole. */
 export function Histogram({
   data,
   from,

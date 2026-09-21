@@ -2,11 +2,7 @@ import { randomBytes } from "node:crypto";
 
 import type { Profile, TokenPair } from "@/lib/api/types";
 
-/**
- * Upstream tokens live here, never in the browser: the cookie carries only `id`.
- * In-memory, so a restart signs everyone out; this file is the only thing to
- * swap for Redis.
- */
+/** Tokens live here, never in the browser. In-memory: a restart signs everyone out. */
 export interface SessionRecord {
   id: string;
   user: Profile;

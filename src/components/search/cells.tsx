@@ -37,10 +37,7 @@ function EndpointCell({ endpoint }: { endpoint: SessionRow["src"] }) {
   );
 }
 
-/**
- * Renders one grid cell from the column definition the server published.
- * Undocumented column types fall through to text, as the API asks.
- */
+/** One cell, from the server's column definition. Undocumented types fall through to text. */
 export function Cell({
   column,
   row,

@@ -3,10 +3,7 @@ import type { FilterNode, SortKey } from "@/lib/api/types";
 export interface SearchUrlState {
   /** null when the URL says nothing, so the caller supplies its own default. */
   sensors: string[] | null;
-  /**
-   * Only set when BOTH bounds are present. Half a window is not a window: filling
-   * the missing bound in from the clock would put a render-time value on screen.
-   */
+  /** Both bounds or neither: one filled in from the clock would render a render-time value. */
   window: { from: string; to: string } | null;
   filter: FilterNode;
   sort: SortKey;

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type * as ClientModule from "./client";
 import { ApiError, captureFetch } from "./client";
-import { isTerminal, newIdempotencyKey, useSearchResults } from "./search";
+import { isTerminal, newIdempotencyKey, nextStatusPoll, useSearchResults } from "./search";
 import type { SearchResults, SessionRow, SortKey } from "./types";
 
 vi.mock("./client", async (importOriginal) => {
@@ -218,6 +218,36 @@ describe("useSearchResults", () => {
       await vi.advanceTimersByTimeAsync(3000);
     });
     expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(callCount + 1);
+  });
+});
+
+describe("nextStatusPoll", () => {
+  const running = { state: "running" } as Parameters<typeof nextStatusPoll>[1];
+  const done = { state: "done" } as Parameters<typeof nextStatusPoll>[1];
+
+  it("polls while the job is not finished", () => {
+    expect(nextStatusPoll(null, running)).toBeGreaterThan(0);
+    expect(nextStatusPoll(null, undefined)).toBeGreaterThan(0);
+  });
+
+  it("stops once the job is finished", () => {
+    expect(nextStatusPoll(null, done)).toBe(false);
+  });
+
+  it("stops on an error instead of hammering a search that is gone", () => {
+    // A 404 or 410 never recovers; polling it spams the console forever.
+    expect(
+      nextStatusPoll(
+        new ApiError({ status: 404, code: "search_not_found", detail: "" }),
+        undefined,
+      ),
+    ).toBe(false);
+    expect(
+      nextStatusPoll(new ApiError({ status: 410, code: "search_expired", detail: "" }), undefined),
+    ).toBe(false);
+    expect(nextStatusPoll(new ApiError({ status: 500, code: "boom", detail: "" }), running)).toBe(
+      false,
+    );
   });
 });
 

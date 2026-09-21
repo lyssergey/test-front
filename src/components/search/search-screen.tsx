@@ -74,10 +74,6 @@ export function SearchScreen() {
     [sensorsQuery.data, user.sensor_ids],
   );
 
-  // Every window is relative to the capture clock, which only /v1/health knows.
-  // Until it answers there is no window — and none is invented from `Date.now()`,
-  // which would differ between the server render and the first client render and
-  // would be outside every sensor's retention anyway.
   const captureWindow = useMemo(() => {
     if (captureNow === undefined) return null;
     const end = new Date(captureNow).getTime();
@@ -87,8 +83,6 @@ export function SearchScreen() {
   const url = useMemo(() => readSearchUrl(new URLSearchParams(params.toString())), [params]);
   const searchId = params.get("sid");
 
-  // Both stay null until touched, so the defaults can follow the capture clock
-  // as it arrives from /v1/health instead of being frozen by an effect.
   const [pickedSensors, setSensors] = useState<string[] | null>(url.sensors);
   const [pickedWindow, setWindow] = useState<{ from: string; to: string } | null>(url.window);
   const [draft, setDraft] = useState<GroupDraft>(() => draftFromFilter(url.filter));
@@ -97,8 +91,6 @@ export function SearchScreen() {
 
   const sensors = pickedSensors ?? user.sensor_ids.slice(0, 5);
   const window = pickedWindow ?? captureWindow;
-  // Stands in for the hooks below while there is no window; they are all disabled,
-  // and a fixed value keeps their keys and the rendered output deterministic.
   const win = window ?? PENDING_WINDOW;
 
   const fields = useMemo(() => fieldsQuery.data ?? [], [fieldsQuery.data]);
@@ -107,9 +99,6 @@ export function SearchScreen() {
   const filterRows = useMemo(() => toFilterRows(built.filter), [built.filter]);
 
   const windowIsReal = window !== null;
-
-  // The flag travels with the value: debounced on its own it would turn true
-  // while the window it guards is still the placeholder.
   const debounced = useDebounced(
     useMemo(
       () => ({
@@ -131,8 +120,6 @@ export function SearchScreen() {
   const cancelSearch = useCancelSearch();
   const status = useSearchStatus(searchId);
   const searchDone = status.data?.state === "done";
-  // A running search only serves its pages in scan order, whatever sort it was
-  // created with, so the chosen order is applied once it has finished.
   const results = useSearchResults(searchId, searchDone && sort !== SCAN_SORT ? sort : null);
 
   const setSearchId = useCallback(
@@ -153,9 +140,6 @@ export function SearchScreen() {
     previousSearchRef.current = searchId;
   }, [searchId]);
 
-  // Leaving the page for good would otherwise hold one of the three slots until
-  // it idles out. In-app navigation keeps it: the id is in the URL, so coming
-  // back picks the same search up again.
   useEffect(() => {
     if (searchId === null) return;
     const release = () => {
@@ -170,8 +154,6 @@ export function SearchScreen() {
   const run = useCallback(() => {
     if (sensors.length === 0 || !windowIsReal) return;
     createSearch.mutate(
-      // Created in scan order on purpose: that is the only order whose pages can
-      // be read while the search is still running.
       {
         sensor_ids: sensors,
         from: win.from,
@@ -183,7 +165,6 @@ export function SearchScreen() {
     );
   }, [built.filter, createSearch, sensors, setSearchId, win.from, win.to, windowIsReal]);
 
-  // A shared `run=1` link starts its search once the metadata it needs is in.
   const autoRunRef = useRef(false);
   useEffect(() => {
     if (autoRunRef.current || !url.autoRun || searchId !== null || !windowIsReal) return;
@@ -193,6 +174,10 @@ export function SearchScreen() {
   }, [fields.length, readableSensors.length, run, searchId, url.autoRun, windowIsReal]);
 
   const search = status.data;
+  // 404: the id in the URL points at a search the server no longer has (it was
+  // cancelled, it idled out, or the API restarted). 410 is the same, stated.
+  const searchGone =
+    status.error !== null && (status.error.status === 404 || status.error.status === 410);
   const searchRunning = search !== undefined && !isTerminal(search.state);
   const conditionCount = countConditions(draft);
 
@@ -347,12 +332,19 @@ export function SearchScreen() {
           />
         ) : null}
 
-        {status.error ? (
+        {searchGone ? (
           <div className="p-3">
             <ErrorState
               error={status.error}
-              onRetry={status.error.status === 410 || status.error.status === 404 ? run : undefined}
+              onRetry={() => {
+                setSearchId(null);
+                run();
+              }}
             />
+          </div>
+        ) : status.error ? (
+          <div className="p-3">
+            <ErrorState error={status.error} onRetry={() => void status.refetch()} />
           </div>
         ) : null}
 
@@ -367,9 +359,11 @@ export function SearchScreen() {
             }
           />
         ) : results.error && results.rows.length === 0 ? (
-          <div className="p-3">
-            <ErrorState error={results.error} onRetry={run} />
-          </div>
+          status.error ? null : (
+            <div className="p-3">
+              <ErrorState error={results.error} onRetry={run} />
+            </div>
+          )
         ) : results.rows.length === 0 &&
           (results.phase === "complete" || search?.state === "done") ? (
           <EmptyState

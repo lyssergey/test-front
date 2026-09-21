@@ -19,12 +19,7 @@ export async function runSearch(page: Page): Promise<void> {
   await expect(page.getByTestId("result-row").first()).toBeVisible({ timeout: 30_000 });
 }
 
-/**
- * Signed in, with every search the test started handed back afterwards.
- *
- * A user may only hold three searches at once, and one that nobody reads sits
- * on its slot for ten minutes — long enough to fail the rest of the suite.
- */
+/** Signed in, handing back each search the test started: only three per user. */
 export const test = base.extend<{ signedIn: Page }>({
   signedIn: async ({ page }, use) => {
     const started: string[] = [];

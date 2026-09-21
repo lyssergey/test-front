@@ -38,11 +38,7 @@ export interface SchemaView {
   sections: ViewSection[];
   /** Keys present in the payload that the schema does not publish. */
   undocumented: { key: string; value: unknown }[];
-  /**
-   * Keys the schema publishes but whose payload has a different shape, so no
-   * declared path resolves — e.g. the v1 decoder's `dns.rcode: "0"` against the
-   * declared `dns.rcode.code` / `dns.rcode.name`. Shown raw rather than dropped.
-   */
+  /** Published keys whose payload has another shape: v1 `dns.rcode: "0"` vs `dns.rcode.code`. */
   mismatched: { key: string; value: unknown }[];
 }
 
@@ -62,11 +58,7 @@ function toViewField(field: SchemaField): ViewField {
   return view;
 }
 
-/**
- * Turns `decoded` plus the published schema into sections a view can render
- * without knowing the protocol: scalars become definition lists, repeated
- * objects become tables.
- */
+/** Scalars become definition lists, repeated objects become tables. */
 export function buildSchemaView(
   decoded: Record<string, unknown>,
   schema: ProtocolSchema,

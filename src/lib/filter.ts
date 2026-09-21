@@ -199,10 +199,7 @@ export function countConditions(draft: FilterDraft): number {
     : draft.children.reduce((total, child) => total + countConditions(child), 0);
 }
 
-/**
- * `/v1/histogram` and `/v1/estimate` only take AND-ed `<field>:<op>:<v1>,<v2>` rows,
- * so anything with `any`, `not` or nesting has no equivalent — hence `null`.
- */
+/** Those endpoints take only AND-ed rows, so `any` / `not` / nesting has no equivalent. */
 export function toFilterRows(filter: FilterNode): string[] | null {
   const conditions: FilterCond[] = [];
 

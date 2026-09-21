@@ -27,13 +27,7 @@ const STATUS_TONE = {
   unknown: "neutral",
 } as const;
 
-/**
- * The hand-written view, for HTTP.
- *
- * It reads both decoders: v2 sends headers as `[{name, value}]` and numbers as
- * numbers, v1 sends a header map and stringified numbers. Header values are
- * marked sensitive by the schema, so they are masked until revealed.
- */
+/** Reads both decoders: v2 sends header arrays and numbers, v1 a header map and strings. */
 export function HttpView({
   decoded,
   schema,

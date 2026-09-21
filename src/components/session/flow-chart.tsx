@@ -6,12 +6,7 @@ import { formatBytes, formatNumber } from "@/lib/format";
 const HEIGHT = 120;
 const MID = HEIGHT / 2;
 
-/**
- * Bytes up and down over the session.
- *
- * Idle buckets are omitted upstream, so samples are placed by `t`: a quiet
- * stretch shows as a gap instead of collapsing the timeline.
- */
+/** Samples are placed by `t`: idle buckets are omitted upstream, so a quiet stretch stays a gap. */
 export function FlowChart({ flow }: { flow: SessionFlow }) {
   const { samples } = flow;
   if (samples.length === 0) {

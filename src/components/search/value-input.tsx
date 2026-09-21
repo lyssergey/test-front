@@ -6,12 +6,7 @@ import { arityOf } from "@/lib/filter";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 
-/**
- * The value editor for one condition.
- *
- * Enum fields get their display labels from `/v1/meta/enums/{enum_name}`; the
- * `sensor` field has no catalogue, so its own `enum` list is used instead.
- */
+/** Enum labels come from `/v1/meta/enums/{enum_name}`; `sensor` has none, so its own list is used. */
 export function ValueInput({
   field,
   op,

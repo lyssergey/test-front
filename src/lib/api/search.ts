@@ -56,17 +56,21 @@ export function useCreateSearch() {
   });
 }
 
+/** How long until the next status poll, or false to stop. */
+export function nextStatusPoll(error: unknown, search: Search | undefined): number | false {
+  // A search that is gone (404) or expired (410) never comes back.
+  if (error) return false;
+  if (!search) return 500;
+  return isTerminal(search.state) ? false : 600;
+}
+
 /** Polls the job while it runs. A search nobody reads for 10 minutes is discarded upstream. */
 export function useSearchStatus(searchId: string | null) {
   return useQuery<Search, ApiError>({
     queryKey: ["search", searchId],
     queryFn: () => captureFetch<Search>(`v1/searches/${searchId!}`),
     enabled: searchId !== null,
-    refetchInterval: (query) => {
-      const search = query.state.data;
-      if (!search) return 500;
-      return isTerminal(search.state) ? false : 600;
-    },
+    refetchInterval: (query) => nextStatusPoll(query.state.error, query.state.data),
     retry: false,
     gcTime: 0,
   });
@@ -107,17 +111,7 @@ interface KeyedResults extends ResultsState {
   key: string;
 }
 
-/**
- * Streams a search's pages while it runs.
- *
- * Upstream hands out rows in scan order as they are found, so this keeps asking:
- * a cursor means another page is ready, no cursor with `complete: false` means
- * the search has not caught up yet, and `complete: true` is the end.
- *
- * `sortOverride` is only for re-sorting a search that has finished. The pages of
- * a running search come back in its own scan order, and asking for another one
- * is a 409 — so it stays out of the query string until the user re-sorts.
- */
+/** Streams a search's pages while it runs. `sortOverride` is a 409 unless the search is done. */
 export function useSearchResults(searchId: string | null, sortOverride: SortKey | null) {
   const runKey = searchId === null ? "" : `${searchId}|${sortOverride ?? ""}`;
   const [state, setState] = useState<KeyedResults>({ ...IDLE, key: "" });
@@ -144,9 +138,7 @@ export function useSearchResults(searchId: string | null, sortOverride: SortKey 
     const { signal } = controller;
     budgetRef.current = AUTO_LOAD_BUDGET;
 
-    // Pages are kept separately, keyed by the cursor that produced them, because
-    // re-reading the tail of a running search answers with that same window plus
-    // whatever has been found since — a superset, not the rows after it.
+    // Keyed by cursor: re-reading a running tail answers with that window grown, not the rows after it.
     const pages: { cursor: string | null; rows: SessionRow[] }[] = [];
     let cursor: string | null = null;
     const rowCount = () => pages.reduce((total, page) => total + page.rows.length, 0);

@@ -5,12 +5,7 @@ import { buildSchemaView } from "@/lib/decoded/schema-view";
 
 import { DecodedValue } from "./value";
 
-/**
- * The view every protocol without a hand-written one gets.
- *
- * Nothing here knows any protocol: sections come from `/v1/meta/schema/{protocol}`,
- * so a decoder that grows a field shows it without a UI change.
- */
+/** Built from `/v1/meta/schema/{protocol}`; nothing here knows any protocol. */
 export function GenericProtocolView({
   decoded,
   schema,
