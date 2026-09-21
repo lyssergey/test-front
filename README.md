@@ -164,7 +164,7 @@ none). Groups nest and can be negated.
 Above the results: a live estimate from `/v1/estimate` before anything runs, and a timeline from
 `/v1/histogram`. Buckets are placed by timestamp rather than by index, because buckets with no
 capture are **omitted** upstream — a capture gap has to read as a hole, not as a quiet spell.
-Partial and under-covered buckets are coloured differently, and clicking a bar zooms the window.
+Bar heights use a square-root scale: on a linear scale one busy bucket flattens every other one to an unreadable line, so the header states `√ scale` rather than let the heights read as proportional. Partial and under-covered buckets are coloured differently, and clicking a bar zooms the window to that bucket — offered only while a bucket is narrower than the window, since at one bucket per window the click would change nothing you could see. The window inputs carry seconds, because at this zoom level a minute is a long time.
 When the filter uses `any`, `not` or nesting, the timeline says why it cannot be drawn instead of
 showing something misleading: that endpoint only takes AND-ed conditions.
 
@@ -240,6 +240,7 @@ npm run test:e2e    # 23 tests, ~25s, needs the API on :8700
 | [`src/lib/api/search.test.ts`](src/lib/api/search.test.ts)                     | the paging state machine: following a cursor, re-reading a grown tail without duplicating it, keeping earlier pages, 410 vs other failures, sort only on a finished search, stopping on unmount |
 | [`src/lib/filter.test.ts`](src/lib/filter.test.ts)                             | filter building: operator arity, numeric coercion, field patterns, nesting and negation, the `field:op:value` form, and a round trip through the URL                                            |
 | [`src/lib/search-url.test.ts`](src/lib/search-url.test.ts)                     | the URL contract: half a window is not a window, a mangled `q` falls back instead of reaching the API, and a generated link round-trips                                                         |
+| [`src/lib/chart-scale.test.ts`](src/lib/chart-scale.test.ts)                   | the timeline's root scale: monotonic, peak at full height, a counted bucket never drawn as nothing                                                                                              |
 | [`src/lib/format.test.ts`](src/lib/format.test.ts)                             | UTC-only formatting, the datetime-local round trip with and without seconds, and a negative duration staying visible                                                                            |
 | [`src/lib/decoded/http.test.ts`](src/lib/decoded/http.test.ts)                 | v1 and v2 HTTP payloads normalising to one shape; absent `truncated` staying unknown rather than becoming `false`                                                                               |
 | [`src/lib/decoded/schema-view.test.ts`](src/lib/decoded/schema-view.test.ts)   | path reading, the v1-object-for-array case, undocumented keys, shape mismatches                                                                                                                 |
