@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+build
+coverage
+.env
+.env.local
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+npm-debug.log*
+test-results
+playwright-report
+blob-report
+.playwright
+.claude
