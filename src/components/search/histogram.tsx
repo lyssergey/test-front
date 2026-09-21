@@ -45,6 +45,11 @@ export function Histogram({
   // variable index is not something every TypeScript version agrees on.
   const hoveredBucket = hovered === null ? undefined : buckets[hovered];
 
+  // Zooming to one bucket only means something while a bucket is narrower than
+  // the window; at one bucket per window a click would change nothing visible.
+  const bucketMs = (data?.bucket_s ?? 300) * 1000;
+  const canZoom = buckets.length > 1 && bucketMs < span;
+
   return (
     <div className="relative px-3 py-1.5">
       <div className="text-2xs text-ink-faint mb-1 flex items-center gap-2">
@@ -55,6 +60,7 @@ export function Histogram({
             · {String(data.bucket_s)}s buckets · peak {formatNumber(peak)}
           </span>
         ) : null}
+        {canZoom ? <span>· click a bar to zoom</span> : null}
         <span className="tabular ml-auto">{formatTimestamp(from)}</span>
         <span>→</span>
         <span className="tabular">{formatTimestamp(to)}</span>
@@ -70,7 +76,7 @@ export function Histogram({
         {buckets.map((bucket, index) => {
           const bucketStart = new Date(bucket.t).getTime();
           const x = ((bucketStart - start) / span) * 1000;
-          const width = Math.max(1.2, ((data?.bucket_s ?? 300) * 1000 * 1000) / span);
+          const width = Math.max(1.2, (bucketMs / span) * 1000);
           const total = sum(bucket.by_protocol);
           const height = (total / peak) * (HEIGHT - 4);
 
@@ -82,7 +88,7 @@ export function Histogram({
               initial={{ height: 0, y: HEIGHT }}
               animate={{ height, y: HEIGHT - height }}
               transition={{ duration: 0.25, delay: Math.min(index * 0.001, 0.2) }}
-              className="cursor-pointer"
+              className={canZoom ? "cursor-pointer" : undefined}
               fill={
                 bucket.partial === true
                   ? "var(--color-medium)"
@@ -93,11 +99,14 @@ export function Histogram({
               opacity={hovered === null || hovered === index ? 0.85 : 0.4}
               onMouseEnter={() => setHovered(index)}
               onMouseLeave={() => setHovered(null)}
-              onClick={() =>
-                onPickWindow({
-                  from: new Date(bucketStart).toISOString(),
-                  to: new Date(bucketStart + (data?.bucket_s ?? 300) * 1000).toISOString(),
-                })
+              onClick={
+                canZoom
+                  ? () =>
+                      onPickWindow({
+                        from: new Date(bucketStart).toISOString(),
+                        to: new Date(bucketStart + bucketMs).toISOString(),
+                      })
+                  : undefined
               }
             />
           );

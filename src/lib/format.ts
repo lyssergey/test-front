@@ -48,12 +48,13 @@ export function formatTime(iso: string): string {
 export function formatIsoForInput(iso: string): string {
   const at = new Date(iso);
   if (Number.isNaN(at.getTime())) return "";
-  return at.toISOString().slice(0, 16);
+  return at.toISOString().slice(0, 19);
 }
 
 export function parseInputToIso(value: string): string | null {
   if (!value) return null;
-  const at = new Date(`${value}:00Z`);
+  // The control drops the seconds when they are zero, whatever its step.
+  const at = new Date(`${value.length === 16 ? `${value}:00` : value}Z`);
   return Number.isNaN(at.getTime()) ? null : at.toISOString();
 }
 

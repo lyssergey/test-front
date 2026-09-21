@@ -61,6 +61,7 @@ export function TimeWindow({
       <div className="flex items-center gap-1.5">
         <Input
           type="datetime-local"
+          step="1"
           aria-label="Window start (UTC)"
           value={formatIsoForInput(from)}
           disabled={disabled}
@@ -68,11 +69,12 @@ export function TimeWindow({
             const iso = parseInputToIso(event.target.value);
             if (iso) onChange({ from: iso, to });
           }}
-          className="tabular w-42"
+          className="tabular w-52"
         />
         <span className="text-ink-faint text-xs">→</span>
         <Input
           type="datetime-local"
+          step="1"
           aria-label="Window end (UTC)"
           value={formatIsoForInput(to)}
           disabled={disabled}
@@ -80,7 +82,7 @@ export function TimeWindow({
             const iso = parseInputToIso(event.target.value);
             if (iso) onChange({ from, to: iso });
           }}
-          className="tabular w-42"
+          className="tabular w-52"
         />
         <span className="text-2xs text-ink-faint">UTC</span>
       </div>
