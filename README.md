@@ -399,11 +399,31 @@ had to correct:
   Rebuilt with plain TypeScript 6 on the bare name, TS 7 under an alias called by path, both
   typechecks in `npm run check`, and an editor setting pointing at the workspace compiler. The one
   genuine disagreement between the two versions is fixed in `histogram.tsx`.
-- **A window guessed from the wall clock.** The first render, before `/v1/health` answers, built a
-  "last 6 hours" window from `Date.now()`. The capture sits eleven months behind, so `/v1/estimate`
-  and `/v1/histogram` answered 400 on every page load. The gate had to travel _through_ the
-  debounce with the value, not beside it, or it turns true while the window it guards is still the
-  guessed one.
+- **A window guessed from the wall clock, twice.** The first render, before `/v1/health` answers,
+  built a "last 6 hours" window from `Date.now()`. The capture sits eleven months behind, so
+  `/v1/estimate` and `/v1/histogram` answered 400 on every page load. The gate had to travel
+  _through_ the debounce with the value, not beside it, or it turns true while the window it guards
+  is still the guessed one.
+
+  A later audit found the same root cause surviving in a narrower case, and that one was a genuine
+  hydration mismatch: on a link carrying `from` but no `to` — a truncated or hand-edited share URL
+  — the "window is real" gate passed on `from` alone, so the guessed end bound reached the DOM as
+  the histogram's end label and the datetime-local input's value, computed against the server's
+  clock on the server pass and the browser's on the first client render. Fixed at the source rather
+  than the symptom: `readSearchUrl` treats a window as indivisible (both bounds or neither), takes
+  no clock-derived defaults, and the window stays `null` until the capture clock arrives, so the
+  deterministic skeleton is the only thing either pass can render. Verified against the served
+  HTML — that URL's SSR output no longer contains a wall-clock timestamp.
+  [`src/lib/search-url.test.ts`](src/lib/search-url.test.ts) pins it, and writing it caught
+  `parseFilter` accepting a JSON array, since `typeof [] === "object"`.
+
+  Worth recording what the same audit **rejected**: adding `suppressHydrationWarning` to the login
+  fields. A password manager or temp-mail extension decorates those inputs before React hydrates,
+  which produces a hydration warning that reads as an app bug and is not one — the served HTML
+  carries no `style` or `data-*` on either input, and neither string appears anywhere in `src/`.
+  Suppressing it would have hidden the symptom at the cost of masking real attribute mismatches on
+  exactly the two fields most worth checking, so it was not added.
+
 - **A missing app icon**, which was the `/favicon.ico` 404 in the console.
 
 The incident conclusion is mine from the data, not from the simulator's source, which I did not
